@@ -340,6 +340,32 @@ class ScoreBoard{
 const socket = io();
 
 
+let players = [];
+let currentPlayer;
+
+socket.emit("joined");
+
+
+document.getElementById("start-btn").addEventListener("click", () => {
+    currentPlayer = new Player(canvas.width / 4 +canvas.width / 2, canvas.height / 2, 20, red, controls.WASD,players.length);
+    socket.emit("join", currentPlayer);
+    console.log("Click")
+  });
+
+
+socket.on("join", (data) => {
+    console.log(data.id)
+    players.push(new Player(canvas.width / 4 +canvas.width / 2, canvas.height / 2, 20, red, controls.WASD,data.id));
+  });
+
+socket.on("joined", (data) => {
+    data.forEach((player, index) => {
+      //players.push(new Player(index, player.name, player.pos, player.img));
+      players.push(new Player(canvas.width / 4 +canvas.width / 2, canvas.height / 2, 20, red, controls.WASD,player.id))
+      console.log(player);
+    });
+  });
+
 var maxScore = 5
 
 const controls ={
@@ -361,14 +387,15 @@ var pressedKeys = {}
 var user2PressedKeys = {}
 
 // Initialize the game
-const player1 = new Player(canvas.width / 4 +canvas.width / 2, canvas.height / 2, 20, red, controls.WASD,1);
+
+//const player1 = new Player(canvas.width / 4 +canvas.width / 2, canvas.height / 2, 20, red, controls.WASD,1);
 const blackBall = new Orb(30, white);
 
 const scoreBoard = new ScoreBoard()
 
 
-player1.speedX = Math.random()*40-20;
-player1.speedY = Math.random()*40-20;
+//player1.speedX = Math.random()*40-20;
+//player1.speedY = Math.random()*40-20;
 
 var isPlaying = false
 
@@ -391,7 +418,7 @@ var deltaY = 0
 
 
 
-var players = {}
+//var players = {}
 
 let timeScale = 0.7
 
@@ -424,32 +451,34 @@ canvas.addEventListener("touchend", function () {
 });
 
 window.addEventListener("keydown", function (event) {
+    if(currentPlayer){
     pressedKeys[event.code] = true;
-    socket.emit('keypress', pressedKeys);
+    socket.emit('keypress', {keys:pressedKeys,user:currentPlayer.id});}
 });
 
 window.addEventListener("keyup", function (event) {
+    if(currentPlayer){
     delete pressedKeys[event.code];
-    socket.emit('keypress', pressedKeys);
+    socket.emit('keypress', {keys:pressedKeys,id:currentPlayer.id});}
 });
 
 
-socket.on('newUser', (data) =>{
+/*socket.on('newUser', (data) =>{
     players = data["users"]
     id = data["id"]
     //const user = users[id]
     const newPlayer = new Player(canvas.width / 4 +canvas.width / 2, canvas.height / 2, 20, blue, controls.WASD,id)
     players[id]["obj"] = newPlayer
     socket.emit('updatePlayers',players)
-})
+})*/
 
 
-socket.on('update', (users) => {
-    players = users
-    /*for (const id in users) {
-      const user = users[id];
-      players[id]["keys"] = user["keys"]
-    }*/
+socket.on('update', (data) => {
+    data.forEach((player, index) => {
+        //players.push(new Player(index, player.name, player.pos, player.img));
+        players[index].keys = player.keys;
+        //console.log(player);
+      });
   });
 
 
@@ -495,16 +524,15 @@ socket.on('update', (users) => {
 
 
 
-createjs.Ticker.framerate =  3;
+createjs.Ticker.framerate =  30;
 createjs.Ticker.on("tick", function (event) {
     const delta = (event.delta/16.67) * timeScale;
     stage.removeAllChildren();
 
     blackBall.draw()
-    for(const id in players){
+    for(i=0;i< players;i++){
 
-        let player = players[id]["obj"]
-        console.log(player.id)
+        let player = players[i]
         player.controls();
         player.update(delta);
         player.draw();
