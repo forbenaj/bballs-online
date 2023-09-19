@@ -9,33 +9,50 @@ const io = socketIo(server);
 // Serve static files (HTML, CSS, JS)
 app.use(express.static(__dirname + '/public'));
 
-var users = {};
+var users = [];
 
 io.on('connection', (socket) => {
   console.log('A user connected');
 
-  // Create a unique user ID for the connected user
   const userId = socket.id;
 
+  socket.on("join", (data) => {
+    /*player = data
+    player.id = userId
+    users.push(player);*/
+    users.push(data);
+    io.emit("join", data);
+  });
+
+  socket.on("joined", () => {
+    socket.emit("joined", users);
+  });
+
+  // Create a unique user ID for the connected user
+
   // Add the user to the list of connected users
-  users[userId] = {};
+  /*users[userId] = {
+    pk:{},
+    x:0,
+    y:0
+  };*/
 
   // Execute the new user function
-  io.emit('newUser',{"users":users,"id":userId})
+  //io.emit('newUser',users[userId])
 
 
 
   // Broadcast user movements to all connected clients
-  socket.on('keypress', (pressedKeys) => {
-    users[userId]["keys"] = pressedKeys;
+  socket.on('keypress', (data) => {
+    users[data.id].keys = data.pressedKeys;
 
     // Send updated user positions to all clients
     io.emit('update', users);
   });
 
-  socket.on('updatePlayers', (players) => {
+  /*socket.on('updatePlayers', (players) => {
     users=players
-  })
+  })*/
 
   // Handle user disconnection
   socket.on('disconnect', () => {
