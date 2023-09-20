@@ -42,20 +42,14 @@ io.on('connection', (socket) => {
 
 
 
-
-  socket.on('updatePlayer', (data) => {
+  // Broadcast user movements to all connected clients
+  socket.on('keypress', (data) => {
     let id = data.id;
-    users[id].x = data.x;
-    users[id].y = data.y;
+    users[id]["keys"] = data.keys;
 
-    io.emit("updatePlayer", users)
-  })
-
-  socket.on('catchBall', (data) => {
-    let id = data.id;
-    users[id].score++
-    io.emit("catchBall", data)
-  })
+    // Send updated user positions to all clients
+    io.emit('update', users);
+  });
 
   /*socket.on('updatePlayers', (players) => {
     users=players

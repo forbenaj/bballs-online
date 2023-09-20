@@ -17,10 +17,8 @@ var stage = new createjs.Stage(canvas);
 // Colors
 const white = "#FFFFFF";
 const black = "#000000";
-const blue = "#000066";
-const red = "#660000";
-const yellow = "#006666"
-const green = "#006600"
+const blue = "#000022";
+const red = "#220000";
 
 const gray1 = "#111111";
 const gray2 = "#222222";
@@ -343,36 +341,28 @@ const socket = io();
 
 
 let players = [];
-let currentPlayer = {x:0,y: 0, id:null, color: null,keys: {},score:0};
-
-colors = [red,blue,yellow,green]
+let currentPlayer;
 
 socket.emit("joined");
 
 
 document.getElementById("start-btn").addEventListener("click", () => {
-    let playerId = players.length
-    let playerColor = colors[playerId]
-    currentPlayer = {x:canvas.width / 4 +canvas.width / 2,y: canvas.height / 2, id:playerId, color: playerColor,keys: {},score:0}
-
-    //currentPlayer = new Player(canvas.width / 4 +canvas.width / 2, canvas.height / 2, 20, red, controls.WASD,players.length);
-    socket.emit("newPlayer", currentPlayer);
+    currentPlayer = new Player(canvas.width / 4 +canvas.width / 2, canvas.height / 2, 20, red, controls.WASD,players.length);
+    socket.emit("join", currentPlayer);
     console.log("Click")
   });
 
 
-socket.on("newPlayer", (player) => {
-    console.log(player.id+" joined the game")
-    let newPlayer = new Player(player.x, player.y, 20, player.color, controls.WASD,player.id)
-    players.push(newPlayer);
+socket.on("join", (data) => {
+    console.log(data.id)
+    players.push(new Player(canvas.width / 4 +canvas.width / 2, canvas.height / 2, 20, red, controls.WASD,data.id));
   });
 
-socket.on("joined", (users) => {
-    users.forEach((player, index) => {
+socket.on("joined", (data) => {
+    data.forEach((player, index) => {
       //players.push(new Player(index, player.name, player.pos, player.img));
-      let alreadyPlaying = new Player(player.x, player.y, 20, player.color, controls.WASD,player.id)
-      players.push(alreadyPlaying)
-      console.log(player.id+" was playing");
+      players.push(new Player(canvas.width / 4 +canvas.width / 2, canvas.height / 2, 20, red, controls.WASD,player.id))
+      console.log(player);
     });
   });
 
@@ -461,19 +451,15 @@ canvas.addEventListener("touchend", function () {
 });
 
 window.addEventListener("keydown", function (event) {
-    if(currentPlayer.id!=null){
-        pressedKeys[event.code] = true;
-        let id = currentPlayer.id
-        players[id].keys = pressedKeys;
-    }
+    if(currentPlayer){
+    pressedKeys[event.code] = true;
+    socket.emit('keypress', {keys:pressedKeys,user:currentPlayer.id});}
 });
 
 window.addEventListener("keyup", function (event) {
-    if(currentPlayer.id!=null){
-        delete pressedKeys[event.code];
-        let id = currentPlayer.id
-        players[id].keys = pressedKeys;
-    };
+    if(currentPlayer){
+    delete pressedKeys[event.code];
+    socket.emit('keypress', {keys:pressedKeys,id:currentPlayer.id});}
 });
 
 
@@ -487,31 +473,13 @@ window.addEventListener("keyup", function (event) {
 })*/
 
 
-
-socket.on('updatePlayer', (data) => {
-data.forEach((player, index) => {
-    //players.push(new Player(index, player.name, player.pos, player.img));
-    let id = player.id
-    if(id == currentPlayer.id){}
-    else{
-        let x = player.x
-        let y = player.y
-        players[id].x = x;
-        players[id].y = y;
+socket.on('update', (data) => {
+    data.forEach((player, index) => {
+        //players.push(new Player(index, player.name, player.pos, player.img));
+        players[index].keys = player.keys;
         //console.log(player);
-    }
-    });
-});
-
-socket.on('catchBall', (data) =>{
-    let id = data.id
-    let x = data.x
-    let y = data.y
-    players[id].score ++;
-    blackBall.x = x
-    blackBall.y = y
-
-})
+      });
+  });
 
 
 
@@ -562,39 +530,25 @@ createjs.Ticker.on("tick", function (event) {
     stage.removeAllChildren();
 
     blackBall.draw()
-    for(i=0;i< players.length;i++){
+    for(i=0;i< players;i++){
 
         let player = players[i]
-        if(player.id==currentPlayer.id){
-            player.controls();
-            player.update(delta);
-            player.draw();
+        player.controls();
+        player.update(delta);
+        player.draw();
 
-            if (blackBall.active) {
-                
-                const distance = Math.sqrt((player.x - blackBall.x) ** 2 + (player.y - blackBall.y) ** 2);
-
-                if (distance <= player.radius + blackBall.radius) {
-                    blackBall.respawn();
-                    socket.emit("catchBall",{
-                        x:blackBall.x,
-                        y:blackBall.y,
-                        id:player.id
-                    })
-                    //new Audio(catchSounds[i]).play()
-                }
-
-            }
+        if (blackBall.active) {
             
-            socket.emit("updatePlayer", {
-                x:player.x,
-                y:player.y,
-                id:player.id
-            });
+            const distance = Math.sqrt((player.x - blackBall.x) ** 2 + (player.y - blackBall.y) ** 2);
+
+            if (distance <= player.radius + blackBall.radius) {
+                blackBall.respawn();
+                //new Audio(catchSounds[i]).play()
+                player.score++
+            }
+
         }
-        else{
-            player.draw();
-        }
+        
 
         /*if(isPlaying){
             scoreBoard.drawNumbers(player)

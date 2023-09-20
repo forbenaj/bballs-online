@@ -16,12 +16,12 @@ io.on('connection', (socket) => {
 
   const userId = socket.id;
 
-  socket.on("newPlayer", (data) => {
+  socket.on("newPlayer", (player) => {
     /*player = data
     player.id = userId
     users.push(player);*/
-    users.push(data);
-    io.emit("newPlayer", data);
+    users.push(player);
+    io.emit("play", player);
   });
 
   socket.on("joined", () => {
@@ -42,20 +42,15 @@ io.on('connection', (socket) => {
 
 
 
+  // Broadcast user movements to all connected clients
+  socket.on('keypress', (data) => {
+    let id = data.id
+    let pk = data.pressedKeys
+    users[id].keys = pk;
 
-  socket.on('updatePlayer', (data) => {
-    let id = data.id;
-    users[id].x = data.x;
-    users[id].y = data.y;
-
-    io.emit("updatePlayer", users)
-  })
-
-  socket.on('catchBall', (data) => {
-    let id = data.id;
-    users[id].score++
-    io.emit("catchBall", data)
-  })
+    // Send updated user positions to all clients
+    io.emit('update', users);
+  });
 
   /*socket.on('updatePlayers', (players) => {
     users=players
